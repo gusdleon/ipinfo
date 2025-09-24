@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced IP Information API Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .demo-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .demo-section:last-child {
+            border-bottom: none;
+        }
+        
+        .demo-section h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+        
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+        }
+        
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            margin: 20px 0;
+        }
+        
+        .results {
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .results pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #7f8c8d;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .feature-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .your-ip {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .your-ip h3 {
+            margin-bottom: 10px;
+        }
+        
+        .ip-display {
+            font-size: 1.5rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Enhanced IP Information API</h1>
+            <p>Comprehensive IP intelligence with rich Cloudflare data integration</p>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🎯 Your IP Information</h2>
+            <div class="your-ip" id="yourIpSection">
+                <h3>Detecting your IP address...</h3>
+                <div class="loading">Loading your enhanced IP information...</div>
+            </div>
+            <button onclick="getMyIP()" id="refreshBtn">🔄 Refresh My Info</button>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🔍 IP Lookup Tool</h2>
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('enhanced')">Enhanced Analysis</button>
+                <button class="tab" onclick="switchTab('geolocation')">Geolocation</button>
+                <button class="tab" onclick="switchTab('security')">Security</button>
+                <button class="tab" onclick="switchTab('network')">Network</button>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="ipInput" placeholder="Enter IP address (e.g., 8.8.8.8)" value="8.8.8.8">
+                <button onclick="analyzeIP()" id="analyzeBtn">🔍 Analyze IP</button>
+            </div>
+            
+            <div class="loading" id="loading">Analyzing IP address...</div>
+            
+            <div class="tab-content active" id="enhanced-content">
+                <div id="enhanced-results"></div>
+            </div>
+            
+            <div class="tab-content" id="geolocation-content">
+                <div id="geolocation-results"></div>
+            </div>
+            
+            <div class="tab-content" id="security-content">
+                <div id="security-results"></div>
+            </div>
+            
+            <div class="tab-content" id="network-content">
+                <div id="network-results"></div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>✨ API Features</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>🌍 Enhanced Geolocation</h3>
+                    <p>Multi-source location data with accuracy scoring and comprehensive geographic information.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🔐 Security Analysis</h3>
+                    <p>Advanced threat detection, VPN/Proxy identification, and bot management integration.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🚀 Performance Insights</h3>
+                    <p>Connection quality assessment, protocol analysis, and edge location details.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🏢 Network Intelligence</h3>
+                    <p>Comprehensive ASN information, ISP details, and network infrastructure analysis.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📊 Analytics & Monitoring</h3>
+                    <p>Request tracking, performance metrics, and usage analytics for API optimization.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>⚡ Cloudflare Integration</h3>
+                    <p>Rich edge data from Cloudflare's global network for enhanced accuracy and performance.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'enhanced';
+        
+        // Get user's own IP on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            getMyIP();
+        });
+        
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            currentTab = tabName;
+        }
+        
+        async function getMyIP() {
+            const section = document.getElementById('yourIpSection');
+            const refreshBtn = document.getElementById('refreshBtn');
+            
+            refreshBtn.disabled = true;
+            section.innerHTML = '<h3>Loading your IP information...</h3><div class="loading">Getting enhanced data from Cloudflare edge...</div>';
+            
+            try {
+                const response = await fetch('https://gusdleon.com/');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+                
+                section.innerHTML = `
+                    <h3>Your IP Address</h3>
+                    <div class="ip-display">${data.ip}</div>
+                    <p>📍 ${data.location.city}, ${data.location.region}, ${data.location.country}</p>
+                    <p>🏢 ${data.network.organization}</p>
+                    <p>🔒 Threat Level: ${data.security.threatLevel}</p>
+                    <p>⚡ Edge: ${data.connection.edgeLocation} (${data.connection.httpProtocol})</p>
+                `;
+            } catch (error) {
+                section.innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+        
+        async function analyzeIP() {
+            const ip = document.getElementById('ipInput').value.trim();
+            const loading = document.getElementById('loading');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            if (!ip) {
+                alert('Please enter an IP address');
+                return;
+            }
+            
+            analyzeBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            // Clear previous results
+            ['enhanced', 'geolocation', 'security', 'network'].forEach(type => {
+                document.getElementById(type + '-results').innerHTML = '';
+            });
+            
+            try {
+                // Fetch all endpoint data
+                const endpoints = {
+                    enhanced: `https://gusdleon.com/api/enhanced/${ip}`,
+                    geolocation: `https://gusdleon.com/api/geolocation/${ip}`,
+                    security: `https://gusdleon.com/api/security/${ip}`,
+                    network: `https://gusdleon.com/api/network/${ip}`
+                };
+                
+                const results = {};
+                
+                for (const [type, url] of Object.entries(endpoints)) {
+                    try {
+                        const response = await fetch(url);
+                        const data = await response.json();
+                        results[type] = data;
+                        
+                        document.getElementById(type + '-results').innerHTML = `
+                            <div class="results">
+                                <h3>📡 ${type.charAt(0).toUpperCase() + type.slice(1)} Analysis Results</h3>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </div>
+                        `;
+                    } catch (error) {
+                        document.getElementById(type + '-results').innerHTML = `
+                            <div class="error">
+                                <strong>Error fetching ${type} data:</strong> ${error.message}
+                            </div>
+                        `;
+                    }
+                }
+                
+            } catch (error) {
+                document.getElementById(currentTab + '-results').innerHTML = `
+                    <div class="error">
+                        <strong>Error:</strong> ${error.message}
+                    </div>
+                `;
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+        
+        // Allow Enter key to trigger analysis
+        document.getElementById('ipInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyzeIP();
+            }
+        });
+    </script>
+</body>
+</html>

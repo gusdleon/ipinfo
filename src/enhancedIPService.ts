@@ -19,6 +19,14 @@ import {
   calculateProcessingTime,
   validateIP
 } from './cloudflareUtils.js';
+import { 
+  ipinfoCache, 
+  enhancedCache, 
+  CACHE_TTL, 
+  generateCacheKey, 
+  cachedFetch 
+} from './cacheUtils.js';
+import { globalAnalytics, type RequestAnalytics } from './analytics.js';
 
 export class EnhancedIPService {
   private ipinfoToken: string;
@@ -38,20 +46,34 @@ export class EnhancedIPService {
       // Validate IP address
       const validation = validateIP(ip);
       if (!validation.valid) {
+        this.recordAnalytics(ip, 'enhanced', request, 400, startTime, requestId);
         return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
+      }
+
+      // Try cache first
+      const cacheKey = generateCacheKey('enhanced', ip);
+      const cached = enhancedCache.get(cacheKey);
+      if (cached) {
+        this.recordAnalytics(ip, 'enhanced', request, 200, startTime, requestId);
+        return { ...cached, requestId, processingTime: calculateProcessingTime(startTime) };
       }
 
       // Extract Cloudflare data
       const cfData = extractCloudflareData(request);
       
-      // Fetch IPInfo data
-      const ipinfoData = await this.fetchIPInfoData(ip);
+      // Fetch IPInfo data with caching
+      const ipinfoData = await this.fetchIPInfoDataCached(ip);
       
       // Combine and enhance the data
       const enhancedResponse = this.combineData(ip, validation.version!, cfData, ipinfoData, requestId, startTime);
       
+      // Cache the result
+      enhancedCache.set(cacheKey, enhancedResponse, CACHE_TTL.ENHANCED_IP);
+      
+      this.recordAnalytics(ip, 'enhanced', request, 200, startTime, requestId);
       return enhancedResponse;
     } catch (error) {
+      this.recordAnalytics(ip, 'enhanced', request, 500, startTime, requestId);
       return this.createErrorResponse(
         'PROCESSING_ERROR',
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -64,16 +86,26 @@ export class EnhancedIPService {
    * Get focused geolocation information
    */
   async getGeolocation(ip: string, request: Request): Promise<GeolocationResponse | APIErrorResponse> {
+    const startTime = Date.now();
     const requestId = generateRequestId();
 
     try {
       const validation = validateIP(ip);
       if (!validation.valid) {
+        this.recordAnalytics(ip, 'geolocation', request, 400, startTime, requestId);
         return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
       }
 
+      // Try cache first
+      const cacheKey = generateCacheKey('geolocation', ip);
+      const cached = enhancedCache.get(cacheKey);
+      if (cached) {
+        this.recordAnalytics(ip, 'geolocation', request, 200, startTime, requestId);
+        return cached;
+      }
+
       const cfData = extractCloudflareData(request);
-      const ipinfoData = await this.fetchIPInfoData(ip);
+      const ipinfoData = await this.fetchIPInfoDataCached(ip);
 
       const sources: string[] = [];
       let accuracy: 'high' | 'medium' | 'low' = 'low';
@@ -95,7 +127,7 @@ export class EnhancedIPService {
 
       const coordinates = this.extractCoordinates(cfData, ipinfoData);
 
-      return {
+      const result: GeolocationResponse = {
         ip,
         country,
         countryCode: cfData.country || '',
@@ -108,7 +140,14 @@ export class EnhancedIPService {
         accuracy,
         sources
       };
+
+      // Cache the result
+      enhancedCache.set(cacheKey, result, CACHE_TTL.GEOLOCATION);
+      
+      this.recordAnalytics(ip, 'geolocation', request, 200, startTime, requestId);
+      return result;
     } catch (error) {
+      this.recordAnalytics(ip, 'geolocation', request, 500, startTime, requestId);
       return this.createErrorResponse(
         'PROCESSING_ERROR',
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -232,6 +271,48 @@ export class EnhancedIPService {
       console.warn('Failed to fetch IPInfo data:', error);
       return null;
     }
+  }
+
+  /**
+   * Fetch data from IPInfo API with caching
+   */
+  private async fetchIPInfoDataCached(ip: string): Promise<IPInfoResponse | null> {
+    const cacheKey = generateCacheKey('ipinfo', ip);
+    
+    return cachedFetch(
+      ipinfoCache,
+      cacheKey,
+      () => this.fetchIPInfoData(ip),
+      CACHE_TTL.IPINFO_DATA
+    );
+  }
+
+  /**
+   * Record analytics for request tracking
+   */
+  private recordAnalytics(
+    ip: string, 
+    endpoint: string, 
+    request: Request, 
+    status: number, 
+    startTime: number, 
+    requestId: string
+  ): void {
+    const cfData = extractCloudflareData(request);
+    
+    const analytics: RequestAnalytics = {
+      timestamp: new Date().toISOString(),
+      ip,
+      endpoint,
+      userAgent: request.headers.get('User-Agent') || undefined,
+      country: cfData.country,
+      datacenter: cfData.colo,
+      processingTime: calculateProcessingTime(startTime),
+      status,
+      requestId
+    };
+    
+    globalAnalytics.recordRequest(analytics);
   }
 
   /**

@@ -23,6 +23,7 @@ import handleEnhanced from './handlers/enhanced.js';
 import handleGeolocation from './handlers/geolocation.js';
 import handleSecurity from './handlers/security.js';
 import handleNetwork from './handlers/network.js';
+import handleAnalytics from './handlers/analytics.js';
 import handleEnhancedOwnIP from './enhancedOwnIP.js';
 
 /**
@@ -64,6 +65,20 @@ function getAPIDocumentation(): Response {
         parameters: { ip: "IPv4 or IPv6 address" },
         features: ["ASN information", "ISP details", "Connection quality", "Protocol analysis"],
         response: "NetworkResponse"
+      },
+      "GET /analytics": {
+        description: "Get API usage analytics and performance metrics",
+        features: ["Request statistics", "Performance metrics", "Cache efficiency", "Geographic distribution"],
+        response: "Analytics summary with cache statistics"
+      },
+      "GET /analytics/recent": {
+        description: "Get recent API requests for debugging",
+        parameters: { limit: "Number of recent requests (max 200)" },
+        response: "Recent requests array"
+      },
+      "GET /analytics/health": {
+        description: "Get system health and status information",
+        response: "Health status with key metrics"
       },
       
       // Legacy endpoints (backwards compatibility)
@@ -143,6 +158,11 @@ export default {
 
       if (pathname.startsWith('/api/network/')) {
         return handleNetwork.fetch(request, env);
+      }
+
+      // Analytics endpoints
+      if (pathname.startsWith('/analytics')) {
+        return handleAnalytics.fetch(request, env);
       }
 
       // Legacy endpoints (backwards compatibility)
