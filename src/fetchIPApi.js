@@ -1,7 +1,7 @@
-// fetchIPApi.ts - Enhanced legacy IP API handler
+// fetchIPApi.js - Enhanced legacy IP API handler
 
 export default {
-    async fetch(clientIP: string | null, env: any): Promise<Response> {
+    async fetch(clientIP, env) {
         try {
             if (!clientIP) {
                 return new Response(JSON.stringify({

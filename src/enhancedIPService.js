@@ -1,14 +1,5 @@
-// enhancedIPService.ts - Enhanced IP information service combining multiple data sources
+// enhancedIPService.js - Enhanced IP information service combining multiple data sources
 
-import type { 
-  IPInfoResponse, 
-  EnhancedIPResponse, 
-  CloudflareRequestData,
-  GeolocationResponse,
-  SecurityResponse,
-  NetworkResponse,
-  APIErrorResponse 
-} from './types.js';
 import { 
   extractCloudflareData, 
   getContinentName, 
@@ -26,19 +17,23 @@ import {
   generateCacheKey, 
   cachedFetch 
 } from './cacheUtils.js';
-import { globalAnalytics, type RequestAnalytics } from './analytics.js';
+import { globalAnalytics } from './analytics.js';
 
 export class EnhancedIPService {
-  private ipinfoToken: string;
-
-  constructor(ipinfoToken: string) {
+  /**
+   * @param {string} ipinfoToken - IPInfo.io API token
+   */
+  constructor(ipinfoToken) {
     this.ipinfoToken = ipinfoToken;
   }
 
   /**
    * Get enhanced IP information combining Cloudflare and IPInfo data
+   * @param {string} ip - IP address to analyze
+   * @param {Request} request - Request object
+   * @returns {Promise<Object>} Enhanced IP response or error
    */
-  async getEnhancedIPInfo(ip: string, request: Request): Promise<EnhancedIPResponse | APIErrorResponse> {
+  async getEnhancedIPInfo(ip, request) {
     const startTime = Date.now();
     const requestId = generateRequestId();
 
@@ -47,7 +42,7 @@ export class EnhancedIPService {
       const validation = validateIP(ip);
       if (!validation.valid) {
         this.recordAnalytics(ip, 'enhanced', request, 400, startTime, requestId);
-        return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
+        return this.createErrorResponse('INVALID_IP', validation.error, requestId);
       }
 
       // Try cache first
@@ -65,7 +60,7 @@ export class EnhancedIPService {
       const ipinfoData = await this.fetchIPInfoDataCached(ip);
       
       // Combine and enhance the data
-      const enhancedResponse = this.combineData(ip, validation.version!, cfData, ipinfoData, requestId, startTime);
+      const enhancedResponse = this.combineData(ip, validation.version, cfData, ipinfoData, requestId, startTime);
       
       // Cache the result
       enhancedCache.set(cacheKey, enhancedResponse, CACHE_TTL.ENHANCED_IP);
@@ -84,8 +79,11 @@ export class EnhancedIPService {
 
   /**
    * Get focused geolocation information
+   * @param {string} ip - IP address to analyze
+   * @param {Request} request - Request object
+   * @returns {Promise<Object>} Geolocation response or error
    */
-  async getGeolocation(ip: string, request: Request): Promise<GeolocationResponse | APIErrorResponse> {
+  async getGeolocation(ip, request) {
     const startTime = Date.now();
     const requestId = generateRequestId();
 
@@ -93,7 +91,7 @@ export class EnhancedIPService {
       const validation = validateIP(ip);
       if (!validation.valid) {
         this.recordAnalytics(ip, 'geolocation', request, 400, startTime, requestId);
-        return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
+        return this.createErrorResponse('INVALID_IP', validation.error, requestId);
       }
 
       // Try cache first
@@ -107,8 +105,8 @@ export class EnhancedIPService {
       const cfData = extractCloudflareData(request);
       const ipinfoData = await this.fetchIPInfoDataCached(ip);
 
-      const sources: string[] = [];
-      let accuracy: 'high' | 'medium' | 'low' = 'low';
+      const sources = [];
+      let accuracy = 'low';
 
       // Determine location from multiple sources
       const country = cfData.country || ipinfoData?.country || '';
@@ -127,7 +125,7 @@ export class EnhancedIPService {
 
       const coordinates = this.extractCoordinates(cfData, ipinfoData);
 
-      const result: GeolocationResponse = {
+      const result = {
         ip,
         country,
         countryCode: cfData.country || '',
@@ -158,20 +156,25 @@ export class EnhancedIPService {
 
   /**
    * Get security-focused information
+   * @param {string} ip - IP address to analyze
+   * @param {Request} request - Request object
+   * @returns {Promise<Object>} Security response or error
    */
-  async getSecurityInfo(ip: string, request: Request): Promise<SecurityResponse | APIErrorResponse> {
+  async getSecurityInfo(ip, request) {
+    const startTime = Date.now();
     const requestId = generateRequestId();
 
     try {
       const validation = validateIP(ip);
       if (!validation.valid) {
-        return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
+        this.recordAnalytics(ip, 'security', request, 400, startTime, requestId);
+        return this.createErrorResponse('INVALID_IP', validation.error, requestId);
       }
 
       const cfData = extractCloudflareData(request);
-      const ipinfoData = await this.fetchIPInfoData(ip);
+      const ipinfoData = await this.fetchIPInfoDataCached(ip);
 
-      const riskFactors: string[] = [];
+      const riskFactors = [];
       
       // Analyze security risks
       const vpn = ipinfoData?.privacy?.vpn || false;
@@ -191,6 +194,7 @@ export class EnhancedIPService {
       const threatLevel = assessThreatLevel(cfData, ipinfoData?.privacy);
       const malicious = threatLevel === 'high' || (tor && proxy);
 
+      this.recordAnalytics(ip, 'security', request, 200, startTime, requestId);
       return {
         ip,
         vpn,
@@ -204,6 +208,7 @@ export class EnhancedIPService {
         riskFactors
       };
     } catch (error) {
+      this.recordAnalytics(ip, 'security', request, 500, startTime, requestId);
       return this.createErrorResponse(
         'PROCESSING_ERROR',
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -214,19 +219,25 @@ export class EnhancedIPService {
 
   /**
    * Get network-focused information
+   * @param {string} ip - IP address to analyze
+   * @param {Request} request - Request object
+   * @returns {Promise<Object>} Network response or error
    */
-  async getNetworkInfo(ip: string, request: Request): Promise<NetworkResponse | APIErrorResponse> {
+  async getNetworkInfo(ip, request) {
+    const startTime = Date.now();
     const requestId = generateRequestId();
 
     try {
       const validation = validateIP(ip);
       if (!validation.valid) {
-        return this.createErrorResponse('INVALID_IP', validation.error!, requestId);
+        this.recordAnalytics(ip, 'network', request, 400, startTime, requestId);
+        return this.createErrorResponse('INVALID_IP', validation.error, requestId);
       }
 
       const cfData = extractCloudflareData(request);
-      const ipinfoData = await this.fetchIPInfoData(ip);
+      const ipinfoData = await this.fetchIPInfoDataCached(ip);
 
+      this.recordAnalytics(ip, 'network', request, 200, startTime, requestId);
       return {
         ip,
         asn: cfData.asn || (ipinfoData?.asn ? parseInt(ipinfoData.asn.asn.replace('AS', '')) : 0),
@@ -240,6 +251,7 @@ export class EnhancedIPService {
         connectionQuality: assessConnectionQuality(cfData)
       };
     } catch (error) {
+      this.recordAnalytics(ip, 'network', request, 500, startTime, requestId);
       return this.createErrorResponse(
         'PROCESSING_ERROR',
         error instanceof Error ? error.message : 'Unknown error occurred',
@@ -250,8 +262,10 @@ export class EnhancedIPService {
 
   /**
    * Fetch data from IPInfo API
+   * @param {string} ip - IP address
+   * @returns {Promise<Object|null>} IPInfo data or null
    */
-  private async fetchIPInfoData(ip: string): Promise<IPInfoResponse | null> {
+  async fetchIPInfoData(ip) {
     try {
       const fetchUrl = `https://ipinfo.io/${ip}/json?token=${this.ipinfoToken}`;
       const response = await fetch(fetchUrl, {
@@ -275,8 +289,10 @@ export class EnhancedIPService {
 
   /**
    * Fetch data from IPInfo API with caching
+   * @param {string} ip - IP address
+   * @returns {Promise<Object|null>} Cached or fresh IPInfo data
    */
-  private async fetchIPInfoDataCached(ip: string): Promise<IPInfoResponse | null> {
+  async fetchIPInfoDataCached(ip) {
     const cacheKey = generateCacheKey('ipinfo', ip);
     
     return cachedFetch(
@@ -289,18 +305,17 @@ export class EnhancedIPService {
 
   /**
    * Record analytics for request tracking
+   * @param {string} ip - IP address
+   * @param {string} endpoint - Endpoint name
+   * @param {Request} request - Request object
+   * @param {number} status - HTTP status
+   * @param {number} startTime - Start time
+   * @param {string} requestId - Request ID
    */
-  private recordAnalytics(
-    ip: string, 
-    endpoint: string, 
-    request: Request, 
-    status: number, 
-    startTime: number, 
-    requestId: string
-  ): void {
+  recordAnalytics(ip, endpoint, request, status, startTime, requestId) {
     const cfData = extractCloudflareData(request);
     
-    const analytics: RequestAnalytics = {
+    const analytics = {
       timestamp: new Date().toISOString(),
       ip,
       endpoint,
@@ -317,24 +332,24 @@ export class EnhancedIPService {
 
   /**
    * Combine data from multiple sources into enhanced response
+   * @param {string} ip - IP address
+   * @param {number} ipVersion - IP version (4 or 6)
+   * @param {Object} cfData - Cloudflare data
+   * @param {Object|null} ipinfoData - IPInfo data
+   * @param {string} requestId - Request ID
+   * @param {number} startTime - Start time
+   * @returns {Object} Enhanced response
    */
-  private combineData(
-    ip: string,
-    ipVersion: 4 | 6,
-    cfData: CloudflareRequestData,
-    ipinfoData: IPInfoResponse | null,
-    requestId: string,
-    startTime: number
-  ): EnhancedIPResponse {
+  combineData(ip, ipVersion, cfData, ipinfoData, requestId, startTime) {
     const coordinates = this.extractCoordinates(cfData, ipinfoData);
-    const sources: string[] = [];
-    const computedFields: string[] = [];
+    const sources = [];
+    const computedFields = [];
 
     if (cfData.country) sources.push('cloudflare');
     if (ipinfoData) sources.push('ipinfo');
 
     // Determine location accuracy
-    let locationAccuracy: 'high' | 'medium' | 'low' = 'low';
+    let locationAccuracy = 'low';
     if (sources.length >= 2 && coordinates.latitude && coordinates.longitude) {
       locationAccuracy = 'high';
       computedFields.push('location_accuracy');
@@ -405,8 +420,11 @@ export class EnhancedIPService {
 
   /**
    * Extract coordinates from available data sources
+   * @param {Object} cfData - Cloudflare data
+   * @param {Object|null} ipinfoData - IPInfo data
+   * @returns {Object} Coordinates object
    */
-  private extractCoordinates(cfData: CloudflareRequestData, ipinfoData: IPInfoResponse | null) {
+  extractCoordinates(cfData, ipinfoData) {
     let latitude = 0;
     let longitude = 0;
 
@@ -425,8 +443,12 @@ export class EnhancedIPService {
 
   /**
    * Create standardized error response
+   * @param {string} code - Error code
+   * @param {string} message - Error message
+   * @param {string} requestId - Request ID
+   * @returns {Object} Error response
    */
-  private createErrorResponse(code: string, message: string, requestId: string): APIErrorResponse {
+  createErrorResponse(code, message, requestId) {
     return {
       error: {
         code,

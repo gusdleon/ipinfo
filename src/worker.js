@@ -28,8 +28,9 @@ import handleEnhancedOwnIP from './enhancedOwnIP.js';
 
 /**
  * API Documentation endpoint
+ * @returns {Response} API documentation response
  */
-function getAPIDocumentation(): Response {
+function getAPIDocumentation() {
   const docs = {
     title: "Enhanced IP Information API",
     description: "Comprehensive IP intelligence combining Cloudflare edge data with external sources",
@@ -117,7 +118,7 @@ function getAPIDocumentation(): Response {
 }
 
 export default {
-  async fetch(request: Request, env: any, ctx: any): Promise<Response> {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
 

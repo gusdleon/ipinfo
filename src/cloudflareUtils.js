@@ -1,12 +1,12 @@
-// cloudflareUtils.ts - Utilities for extracting and processing Cloudflare data
-
-import type { CloudflareRequestData } from './types.js';
+// cloudflareUtils.js - Utilities for extracting and processing Cloudflare data
 
 /**
  * Extract Cloudflare request data from the CF object
+ * @param {Request} request - The incoming request
+ * @returns {Object} Cloudflare data object
  */
-export function extractCloudflareData(request: Request): CloudflareRequestData {
-  const cf = (request as any).cf || {};
+export function extractCloudflareData(request) {
+  const cf = request.cf || {};
   
   return {
     // Geographic information
@@ -47,9 +47,11 @@ export function extractCloudflareData(request: Request): CloudflareRequestData {
 
 /**
  * Get continent name from continent code
+ * @param {string} code - Continent code
+ * @returns {string} Continent name
  */
-export function getContinentName(code: string): string {
-  const continents: Record<string, string> = {
+export function getContinentName(code) {
+  const continents = {
     'AF': 'Africa',
     'AN': 'Antarctica',
     'AS': 'Asia',
@@ -63,10 +65,12 @@ export function getContinentName(code: string): string {
 
 /**
  * Get datacenter location name from colo code
+ * @param {string} colo - Colo code
+ * @returns {string} Datacenter location
  */
-export function getDatacenterLocation(colo: string): string {
+export function getDatacenterLocation(colo) {
   // This is a simplified mapping - in production, you'd want a more comprehensive list
-  const datacenters: Record<string, string> = {
+  const datacenters = {
     'ATL': 'Atlanta, US',
     'DFW': 'Dallas, US',
     'EWR': 'Newark, US',
@@ -92,8 +96,10 @@ export function getDatacenterLocation(colo: string): string {
 
 /**
  * Determine connection quality based on various metrics
+ * @param {Object} cfData - Cloudflare data object
+ * @returns {string} Connection quality rating
  */
-export function assessConnectionQuality(cfData: CloudflareRequestData): 'excellent' | 'good' | 'fair' | 'poor' {
+export function assessConnectionQuality(cfData) {
   let score = 0;
   
   // HTTP/2 or HTTP/3 gets bonus points
@@ -117,11 +123,11 @@ export function assessConnectionQuality(cfData: CloudflareRequestData): 'excelle
 
 /**
  * Assess threat level based on available security data
+ * @param {Object} cfData - Cloudflare data object
+ * @param {Object} [ipinfoPrivacy] - IPInfo privacy data
+ * @returns {string} Threat level
  */
-export function assessThreatLevel(
-  cfData: CloudflareRequestData,
-  ipinfoPrivacy?: any
-): 'low' | 'medium' | 'high' {
+export function assessThreatLevel(cfData, ipinfoPrivacy) {
   let riskScore = 0;
   
   // Check bot management score
@@ -146,22 +152,27 @@ export function assessThreatLevel(
 
 /**
  * Generate a unique request ID
+ * @returns {string} Unique request ID
  */
-export function generateRequestId(): string {
+export function generateRequestId() {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**
  * Calculate processing time
+ * @param {number} startTime - Start time in milliseconds
+ * @returns {number} Processing time in milliseconds
  */
-export function calculateProcessingTime(startTime: number): number {
+export function calculateProcessingTime(startTime) {
   return Date.now() - startTime;
 }
 
 /**
  * Validate IP address format
+ * @param {string} ip - IP address to validate
+ * @returns {Object} Validation result
  */
-export function validateIP(ip: string): { valid: boolean; version?: 4 | 6; error?: string } {
+export function validateIP(ip) {
   if (!ip) {
     return { valid: false, error: 'IP address is required' };
   }

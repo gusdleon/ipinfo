@@ -1,8 +1,8 @@
-//ipv6.ts - Enhanced IPv6 handler with better validation and error handling
+//ipv6.js - Enhanced IPv6 handler with better validation and error handling
 import handleIP from './fetchIPApi.js'
 
 export default {
-    async fetch(request: Request, env: any): Promise<Response> {
+    async fetch(request, env) {
         try {
             const url = new URL(request.url);
             const ip = url.pathname.slice(14); // Remove "/api/ipv6info/"

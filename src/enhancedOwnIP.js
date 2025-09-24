@@ -1,11 +1,10 @@
-// enhancedOwnIP.ts - Enhanced service for client's own IP with rich Cloudflare data
+// enhancedOwnIP.js - Enhanced service for client's own IP with rich Cloudflare data
 
 import { EnhancedIPService } from './enhancedIPService.js';
 import { extractCloudflareData, generateRequestId, calculateProcessingTime } from './cloudflareUtils.js';
-import type { EnhancedIPResponse, APIErrorResponse } from './types.js';
 
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request, env) {
     const startTime = Date.now();
     const requestId = generateRequestId();
     
@@ -50,7 +49,7 @@ export default {
       
       // Add additional client-specific metadata
       if ('requestId' in result) {
-        const enhancedResult = result as EnhancedIPResponse;
+        const enhancedResult = result;
         
         // Add request analysis
         const requestAnalysis = {

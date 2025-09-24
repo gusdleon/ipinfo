@@ -1,25 +1,29 @@
-// analytics.ts - Request analytics and insights
+// analytics.js - Request analytics and insights
 
-export interface RequestAnalytics {
-  timestamp: string;
-  ip: string;
-  endpoint: string;
-  userAgent?: string;
-  country?: string;
-  datacenter?: string;
-  processingTime: number;
-  status: number;
-  requestId: string;
-}
+/**
+ * @typedef {Object} RequestAnalytics
+ * @property {string} timestamp - ISO timestamp
+ * @property {string} ip - IP address
+ * @property {string} endpoint - API endpoint used
+ * @property {string} [userAgent] - User agent string
+ * @property {string} [country] - Country code
+ * @property {string} [datacenter] - Datacenter code
+ * @property {number} processingTime - Processing time in ms
+ * @property {number} status - HTTP status code
+ * @property {string} requestId - Request ID
+ */
 
 export class AnalyticsService {
-  private analyticsData: RequestAnalytics[] = [];
-  private maxEntries = 1000; // Keep last 1000 requests in memory
+  constructor() {
+    this.analyticsData = [];
+    this.maxEntries = 1000; // Keep last 1000 requests in memory
+  }
 
   /**
    * Record a request for analytics
+   * @param {RequestAnalytics} analytics - Analytics data
    */
-  recordRequest(analytics: RequestAnalytics): void {
+  recordRequest(analytics) {
     this.analyticsData.push(analytics);
     
     // Keep only the most recent entries
@@ -30,8 +34,9 @@ export class AnalyticsService {
 
   /**
    * Get analytics summary
+   * @returns {Object} Analytics summary
    */
-  getAnalyticsSummary(): any {
+  getAnalyticsSummary() {
     if (this.analyticsData.length === 0) {
       return {
         totalRequests: 0,
@@ -55,15 +60,15 @@ export class AnalyticsService {
     const endpointStats = this.analyticsData.reduce((acc, req) => {
       acc[req.endpoint] = (acc[req.endpoint] || 0) + 1;
       return acc;
-    }, {} as Record<string, number>);
+    }, {});
 
     // Country stats
     const countryStats = this.analyticsData
       .filter(req => req.country)
       .reduce((acc, req) => {
-        acc[req.country!] = (acc[req.country!] || 0) + 1;
+        acc[req.country] = (acc[req.country] || 0) + 1;
         return acc;
-      }, {} as Record<string, number>);
+      }, {});
 
     // Average processing time
     const avgProcessingTime = this.analyticsData.reduce((sum, req) => 
@@ -74,7 +79,7 @@ export class AnalyticsService {
     const statusCodes = this.analyticsData.reduce((acc, req) => {
       acc[req.status] = (acc[req.status] || 0) + 1;
       return acc;
-    }, {} as Record<number, number>);
+    }, {});
 
     return {
       summary: {
@@ -103,8 +108,10 @@ export class AnalyticsService {
 
   /**
    * Get recent requests (for debugging)
+   * @param {number} [limit=50] - Number of requests to return
+   * @returns {RequestAnalytics[]} Recent requests
    */
-  getRecentRequests(limit: number = 50): RequestAnalytics[] {
+  getRecentRequests(limit = 50) {
     return this.analyticsData
       .slice(-limit)
       .reverse(); // Most recent first
@@ -113,7 +120,7 @@ export class AnalyticsService {
   /**
    * Clear analytics data
    */
-  clearAnalytics(): void {
+  clearAnalytics() {
     this.analyticsData = [];
   }
 }

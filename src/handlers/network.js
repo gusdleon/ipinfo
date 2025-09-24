@@ -1,9 +1,9 @@
-// handlers/security.ts - Security-focused endpoint
+// handlers/network.js - Network-focused endpoint
 
 import { EnhancedIPService } from '../enhancedIPService.js';
 
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request, env) {
     const service = new EnhancedIPService(env.IPInfoToken);
     const url = new URL(request.url);
     
@@ -40,7 +40,7 @@ export default {
     }
 
     try {
-      const result = await service.getSecurityInfo(ip, request);
+      const result = await service.getNetworkInfo(ip, request);
       
       return new Response(JSON.stringify(result, null, 2), {
         headers: {
@@ -48,7 +48,7 @@ export default {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
-          'Cache-Control': 'public, max-age=300', // Cache for 5 minutes (security data changes more frequently)
+          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour (network data is relatively stable)
         }
       });
     } catch (error) {

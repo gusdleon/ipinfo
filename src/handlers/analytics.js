@@ -1,10 +1,10 @@
-// handlers/analytics.ts - Analytics and insights endpoint
+// handlers/analytics.js - Analytics and insights endpoint
 
 import { globalAnalytics } from '../analytics.js';
 import { enhancedCache, ipinfoCache } from '../cacheUtils.js';
 
 export default {
-  async fetch(request: Request, env: any): Promise<Response> {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
