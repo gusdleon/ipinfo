@@ -6,12 +6,12 @@ env = { }
 
 [[routes]]
 pattern = "gusdleon.com/api/ipv4info*"
-zone_name = ""
+zone_name = "gusdleon.com"
 script = "ipinfo"
 
 [[routes]]
 pattern = "gusdleon.com/api/ipv6info*"
-zone_name = ""
+zone_name = "gusdleon.com"
 script = "ipinfo"
 
 [triggers]
