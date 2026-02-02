@@ -1,7 +1,7 @@
 name = "ipinfo"
 main = "src/worker.ts"
 compatibility_date = "2023-06-11"
-usage_model = "bundled"
+workers_dev = false
 env = { }
 
 [[routes]]
@@ -11,6 +11,13 @@ zone_name = "gusdleon.com"
 [[routes]]
 pattern = "gusdleon.com/api/ipv6info*"
 zone_name = "gusdleon.com"
+
+[placement]
+mode = "smart"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
 
 [triggers]
 crons = [ ]
